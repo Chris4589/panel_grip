@@ -1,13 +1,14 @@
 #include <admin_panel>
 
 var fw_LoginAdmin;
-
+//http://198.12.74.204:5050/servers/Ip?ipServer=198.198.198.20906&fk_user=1
 var const authUser[] = "chris";
 var const authPassword[] = "123456789";
 
 var const urlBase[] = "http://198.12.74.204:5050";
 
 var authToken[400];
+var fk_User;
 
 var bool:authLoged;
 
@@ -37,7 +38,6 @@ function give_admin(id) {
 		return;
 	}
 
-	
 	if (isError(body)) {
 		server_print("Hubo un error en la peticion a node.");
 		return;
@@ -48,6 +48,7 @@ function give_admin(id) {
 		server_print("El usuario no es admin.");
 		return;
 	}
+
 	var role[32], authid[32], flags[32], createdAt[50];
 	var GripJSONValue:value = grip_json_array_get_value(msg, 0);
 	grip_json_object_get_string(value, "role", role, charsmax(role));
@@ -68,15 +69,15 @@ function give_admin(id) {
 	grip_destroy_json_value(value);
 }
 
-function check_isAdmin(id) {
+function check_isAdmin(id, const authid[]) {
 
 	if (!authLoged) {
 		server_print("No te haz logueado a tu cuenta en %s.", urlBase);
 		return;
 	}
 
-	new url[200];
-	formatex(url, charsmax(url), "%s/admins/server?fk_UserId=1&authid=STEAM_0:1:161494124&fk_ServerId=1", urlBase);
+	var url[200];
+	formatex(url, charsmax(url), "%s/admins/server?fk_UserId=%d&authid=%s&fk_ServerId=1", urlBase, fk_User, authid);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
@@ -86,7 +87,7 @@ function check_isAdmin(id) {
 }
 
 function set_admin(id, const flags[]) {
-	if (!(0 <= id <= MAX_PLAYERS)) {
+	if (!(1 <= id <= MAX_PLAYERS)) {
 		console_print(0, "Error: El player debe estar en un rango de 1 a 32");
 		return false;
 	}
@@ -125,9 +126,46 @@ function handlerAuth() {
 		server_print("La respuesta de msg no es un JSON");
 		return;
 	}
+
+	authLoged = true;
+	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
+	fk_User = grip_json_object_get_number(msg, "id");
+	server_print("token [ %s ]", authToken);
+	grip_destroy_json_value(msg);
+}
+
+function handler_renew() {
+	var GripHTTPStatus:status = grip_get_response_status_code();
+
+	if (!(GripHTTPStatusOk <= status <= GripHTTPStatusPartialContent)) {
+		server_print("Code Status [ %d ]", status);
+		return;
+	}
+
+	var responses[1024];
+	var GripJSONValue:body = grip_json_parse_response_body(responses, charsmax(responses));
+
+	if (body == Invalid_GripJSONValue) {
+		server_print("La respuesta esperada no es un JSON");
+		return;
+	}
+
+	if (isError(body)) {
+		server_print("Hubo un error en la peticion a node.");
+		return;
+	}
+
+	var GripJSONValue:msg = grip_json_object_get_value(body, "msg");
+
+	if (msg == Invalid_GripJSONValue) {
+		server_print("La respuesta de msg no es un JSON");
+		return;
+	}
+
 	authLoged = true;
 	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
 	server_print("token [ %s ]", authToken);
+	grip_destroy_json_value(msg);
 }
 
 function renew_token() {
@@ -137,18 +175,18 @@ function renew_token() {
 		return;
 	}
 	
-	new url[200];
+	var url[200];
 	formatex(url, charsmax(url), "%s/login/renew/", urlBase);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
 	grip_options_add_header(options, "token", authToken);
 
-	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerAuth", options);
+	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handler_renew", options);
 }
 
 function auth() {
-	new url[200];
+	var url[200];
 	formatex(url, charsmax(url), "%s/login/", urlBase);
 
 	var GripJSONValue:object = grip_json_init_object();
@@ -164,9 +202,14 @@ function auth() {
 	grip_request(url, body, GripRequestTypePost, "handlerAuth", options);
 }
 
+function client_putinserver(id) {
+	new authid[50];
+	get_user_authid(id, authid, charsmax(authid));
+
+	check_isAdmin(id, authid);
+}
+
 function plugin_init() {
-	register_clcmd("say /admin", "check_isAdmin");
-	register_clcmd("say /renew", "renew_token");
 
 	fw_LoginAdmin = CreateMultiForward("fw_LoginPost", ET_IGNORE, FP_CELL);
 
