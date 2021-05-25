@@ -1,14 +1,13 @@
 #include <admin_panel>
 
 var fw_LoginAdmin;
-//http://198.12.74.204:5050/servers/Ip?ipServer=198.198.198.20906&fk_user=1
+
 var const authUser[] = "chris";
 var const authPassword[] = "123456789";
 
 var const urlBase[] = "http://198.12.74.204:5050";
 
-var authToken[400];
-var fk_User;
+var authToken[400], idServer;
 
 var bool:authLoged;
 
@@ -77,7 +76,7 @@ function check_isAdmin(id, const authid[]) {
 	}
 
 	var url[200];
-	formatex(url, charsmax(url), "%s/admins/server?fk_UserId=%d&authid=%s&fk_ServerId=1", urlBase, fk_User, authid);
+	formatex(url, charsmax(url), "%s/admins/server?authid=%s&fk_ServerId=%d", urlBase, authid, idServer);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
@@ -127,14 +126,59 @@ function handlerAuth() {
 		return;
 	}
 
-	authLoged = true;
 	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
-	fk_User = grip_json_object_get_number(msg, "id");
-	server_print("token [ %s ]", authToken);
+	server_print("your server token is [ %s ]", authToken);
 	grip_destroy_json_value(msg);
+
+	if (!authLoged) {
+		getServer();
+	}
+	authLoged = true;
 }
 
-function handler_renew() {
+function renew_token() {
+
+	if (!authLoged) {
+		server_print("No te haz logueado a tu cuenta en %s.", urlBase);
+		return;
+	}
+	
+	var url[200];
+	formatex(url, charsmax(url), "%s/login/renew/", urlBase);
+
+	var GripRequestOptions:options = grip_create_default_options();
+	grip_options_add_header(options, "Content-Type", "application/json");
+	grip_options_add_header(options, "token", authToken);
+
+	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerAuth", options);
+}
+
+function auth() {
+	var url[200];
+	formatex(url, charsmax(url), "%s/login/", urlBase);
+
+	var GripJSONValue:object = grip_json_init_object();
+	grip_json_object_set_string(object, "user", authUser);
+	grip_json_object_set_string(object, "password", authPassword);
+
+	var GripBody:body = object != Invalid_GripJSONValue ? grip_body_from_json(object) : Empty_GripBody;
+
+	var GripRequestOptions:options = grip_create_default_options();
+	grip_options_add_header(options, "Content-Type", "application/json");
+	grip_options_add_header(options, "User-Agent", "Grip");
+
+	grip_request(url, body, GripRequestTypePost, "handlerAuth", options);
+}
+
+
+function client_putinserver(id) {
+	new authid[50];
+	get_user_authid(id, authid, charsmax(authid));
+
+	check_isAdmin(id, authid);
+}
+
+function handlerServer() {
 	var GripHTTPStatus:status = grip_get_response_status_code();
 
 	if (!(GripHTTPStatusOk <= status <= GripHTTPStatusPartialContent)) {
@@ -162,59 +206,30 @@ function handler_renew() {
 		return;
 	}
 
-	authLoged = true;
-	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
-	server_print("token [ %s ]", authToken);
+	idServer = grip_json_object_get_number(msg, "id");
+	server_print("your server id is [ %d ]", idServer);
 	grip_destroy_json_value(msg);
 }
 
-function renew_token() {
-
-	if (!authLoged) {
-		server_print("No te haz logueado a tu cuenta en %s.", urlBase);
-		return;
-	}
-	
-	var url[200];
-	formatex(url, charsmax(url), "%s/login/renew/", urlBase);
+function getServer() {
+	var url[200], address[50];
+	get_cvar_string("net_address", address, charsmax(address));
+	formatex(url, charsmax(url), "%s/servers/Ip?ipServer=%s", urlBase, address);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
 	grip_options_add_header(options, "token", authToken);
 
-	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handler_renew", options);
-}
-
-function auth() {
-	var url[200];
-	formatex(url, charsmax(url), "%s/login/", urlBase);
-
-	var GripJSONValue:object = grip_json_init_object();
-	grip_json_object_set_string(object, "user", authUser);
-	grip_json_object_set_string(object, "password", authPassword);
-
-	var GripBody:body = object != Invalid_GripJSONValue ? grip_body_from_json(object) : Empty_GripBody;
-
-	var GripRequestOptions:options = grip_create_default_options();
-	grip_options_add_header(options, "Content-Type", "application/json");
-	grip_options_add_header(options, "User-Agent", "Grip");
-
-	grip_request(url, body, GripRequestTypePost, "handlerAuth", options);
-}
-
-function client_putinserver(id) {
-	new authid[50];
-	get_user_authid(id, authid, charsmax(authid));
-
-	check_isAdmin(id, authid);
+	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerServer", options);
 }
 
 function plugin_init() {
+	register_plugin("Rest Admin", "0.1b", "Hypnotize");
 
 	fw_LoginAdmin = CreateMultiForward("fw_LoginPost", ET_IGNORE, FP_CELL);
 
 	authLoged = false;
 
-	set_task(2.0, "auth", _, _, _, "c");
+	set_task(1.0, "auth", _, _, _, "c");
 	set_task(120.0, "renew_token", _, _, _, "d");
 }
