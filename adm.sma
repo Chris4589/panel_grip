@@ -87,7 +87,7 @@ function check_isAdmin(id) {
 
 function set_admin(id, const flags[]) {
 	if (!(1 <= id <= MAX_PLAYERS)) {
-		console_print(0, "Error: El player debe estar en un rango de 1 a 32");
+		console_print(0, "Error: El player debe estar en un rango de 1 a %d", MAX_PLAYERS);
 		return false;
 	}
 	//hacer fw_pre
