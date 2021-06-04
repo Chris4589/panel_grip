@@ -1,6 +1,13 @@
 #include <admin_panel>
 
-var fw_LoginAdmin;
+/*
+	forward fw_LoginPost(id);
+	forward fw_InGame_Post(id);
+
+	native get_roleUser(id, dest[], len);
+*/
+
+var fw_LoginAdmin, fw_InGame;
 
 var const authUser[] = "chris";
 var const authPassword[] = "123456789";
@@ -11,14 +18,17 @@ var authToken[400], idServer;
 
 var bool:authLoged;
 
+var fechaVencimiento[33][32], roleUser[33][32];
+
 function give_admin(id) {
 	if (!is_user_connected(id)) {
 		server_print("El player no esta conectado");
 		return;
 	}
+
 	var GripResponseState:responseState = grip_get_response_state();
 	if (responseState != GripResponseStateSuccessful) {
-		server_print("Response Status Faild: [ %d ]", responseState);
+		server_print("Response Status Failed: [ %d ]", responseState);
 		return;
 	}
 
@@ -33,7 +43,7 @@ function give_admin(id) {
 	var GripJSONValue:body = grip_json_parse_response_body(responses, charsmax(responses));
 
 	if (body == Invalid_GripJSONValue) {
-		server_print("La respuesta esperada no es un JSON");
+		server_print("La respuesta esperada no es un JSON: %s", responses);
 		return;
 	}
 
@@ -48,12 +58,13 @@ function give_admin(id) {
 		return;
 	}
 
-	var role[32], authid[32], flags[32], createdAt[50];
+	var role[32], authid[32], flags[32], createdAt[50], vencimiento[50];
 	var GripJSONValue:value = grip_json_array_get_value(msg, 0);
 	grip_json_object_get_string(value, "role", role, charsmax(role));
 	grip_json_object_get_string(value, "authid", authid, charsmax(authid));
 	grip_json_object_get_string(value, "flags", flags, charsmax(flags));
 	grip_json_object_get_string(value, "createdAt", createdAt, charsmax(createdAt));
+	grip_json_object_get_string(value, "vencimiento", vencimiento, charsmax(vencimiento));
 
 	server_print("/*******************************************/");
 	server_print("Admin cargado.");
@@ -63,9 +74,14 @@ function give_admin(id) {
 	server_print("createdAt: [ %s ]", createdAt);
 	server_print("/*******************************************/");
 
+	copy(fechaVencimiento[id], charsmax(fechaVencimiento[]), vencimiento);
+	copy(roleUser[id], charsmax(roleUser[]), role);
+
 	set_admin(id, flags);
 
 	grip_destroy_json_value(value);
+	grip_destroy_json_value(msg);
+	grip_destroy_json_value(body);
 }
 
 function check_isAdmin(id, const authid[]) {
@@ -83,6 +99,8 @@ function check_isAdmin(id, const authid[]) {
 	grip_options_add_header(options, "token", authToken);
 
 	grip_request(url, Empty_GripBody, GripRequestTypeGet, "give_admin", options, id);
+
+	grip_destroy_options(options);
 }
 
 function set_admin(id, const flags[]) {
@@ -110,7 +128,7 @@ function handlerAuth() {
 	var GripJSONValue:body = grip_json_parse_response_body(responses, charsmax(responses));
 
 	if (body == Invalid_GripJSONValue) {
-		server_print("La respuesta esperada no es un JSON");
+		server_print("La respuesta esperada no es un JSON: %s", responses);
 		return;
 	}
 
@@ -128,12 +146,14 @@ function handlerAuth() {
 
 	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
 	server_print("your server token is [ %s ]", authToken);
-	grip_destroy_json_value(msg);
 
 	if (!authLoged) {
 		getServer();
 	}
 	authLoged = true;
+
+	grip_destroy_json_value(msg);
+	grip_destroy_json_value(body);
 }
 
 function renew_token() {
@@ -151,6 +171,8 @@ function renew_token() {
 	grip_options_add_header(options, "token", authToken);
 
 	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerAuth", options);
+
+	grip_destroy_options(options);
 }
 
 function auth() {
@@ -168,11 +190,17 @@ function auth() {
 	grip_options_add_header(options, "User-Agent", "Grip");
 
 	grip_request(url, body, GripRequestTypePost, "handlerAuth", options);
+
+	grip_destroy_body(body);
+	grip_destroy_options(options);
+	grip_destroy_json_value(object);
 }
 
 
 function client_putinserver(id) {
-	new authid[50];
+	roleUser[id][0] = EOS;
+
+	var authid[50];
 	get_user_authid(id, authid, charsmax(authid));
 
 	check_isAdmin(id, authid);
@@ -190,7 +218,7 @@ function handlerServer() {
 	var GripJSONValue:body = grip_json_parse_response_body(responses, charsmax(responses));
 
 	if (body == Invalid_GripJSONValue) {
-		server_print("La respuesta esperada no es un JSON");
+		server_print("La respuesta esperada no es un JSON: %s", responses);
 		return;
 	}
 
@@ -208,7 +236,9 @@ function handlerServer() {
 
 	idServer = grip_json_object_get_number(msg, "id");
 	server_print("your server id is [ %d ]", idServer);
+
 	grip_destroy_json_value(msg);
+	grip_destroy_json_value(body);
 }
 
 function getServer() {
@@ -221,15 +251,50 @@ function getServer() {
 	grip_options_add_header(options, "token", authToken);
 
 	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerServer", options);
+
+	grip_destroy_options(options);
 }
 
-function plugin_init() {
-	register_plugin("Rest Admin", "0.1b", "Hypnotize");
+function showVencimiento(id) {
+	if (!is_user_admin(id)) {
+		return;
+	}
+
+	client_print_color(id, print_team_blue, "/************************************/");
+	client_print_color(id, print_team_blue, "Tu admin [ %s ] ha sido cargado...", roleUser[id]);
+	client_print_color(id, print_team_blue, "vence [ %s ] recuerda emitir tus pagos.", fechaVencimiento[id]);
+	client_print_color(id, print_team_blue, "/************************************/");
+
+	console_print(id, "/************************************/");
+	console_print(id, "Tu admin [ %s ] ha sido cargado...", roleUser[id]);
+	console_print(id, "vence [ %s ] recuerda emitir tus pagos.", fechaVencimiento[id]);
+	console_print(id, "/************************************/");
+
+	var ret;
+	ExecuteForward(fw_InGame, ret, id);
+}
+
+function OnStart() {
+	admin_init(param1, param2, param3);
+
+	registerCommand("joinclass", "showVencimiento");
 
 	fw_LoginAdmin = CreateMultiForward("fw_LoginPost", ET_IGNORE, FP_CELL);
+	fw_InGame = CreateMultiForward("fw_InGame_Post", ET_IGNORE, FP_CELL);
 
 	authLoged = false;
 
 	set_task(1.0, "auth", _, _, _, "c");
 	set_task(120.0, "renew_token", _, _, _, "d");
+}
+
+
+function CreateNatives() {
+	register_native("get_roleUser", "handler_roleUser", 0);// get_roleUser(id, dest[], len);
+}
+
+public handler_roleUser(plugin, params)
+{
+	set_string(2, roleUser[get_param(1)], get_param(3));
+	return -1;
 }
