@@ -1,13 +1,15 @@
 #include <amxmisc>
-#include <reapi>
+//#include <reapi>
 #include <grip>
-
-forward fw_LoginPost(const iId);
 
 #pragma semicolon 1
 
 #define function public
 #define var new
+#define registerCommand register_clcmd
+#define admin_init register_plugin
+#define OnStart plugin_init
+#define CreateNatives plugin_natives
 
 stock isError(GripJSONValue:body) {
 	var error, GripJSONValue:fieldError = grip_json_object_get_value(body, "error");
@@ -26,6 +28,9 @@ stock isArrayValid(GripJSONValue:msg) {
 		server_print("grip_json_array_get_count: [ %d ]", grip_json_array_get_count(msg));
 		return false;
 	}
-	server_print("grip_json_array_get_count: [ %d ]", grip_json_array_get_count(msg));
 	return true;
 }
+
+stock const param1[] = "Admin Rest Panel";
+stock const param2[] = "0.1b";
+stock const param3[] = "Hypnotize";
