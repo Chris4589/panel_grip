@@ -279,9 +279,6 @@ function showVencimiento(id) {
 function OnStart() {
 	admin_init(param1, param2, param3);
 
-	registerCommand("joinclass", "showVencimiento");
-	registerCommand("say admin", "showVencimiento");
-
 	fw_LoginAdmin = CreateMultiForward("fw_LoginPost", ET_IGNORE, FP_CELL);
 	fw_InGame = CreateMultiForward("fw_InGame_Post", ET_IGNORE, FP_CELL);
 
