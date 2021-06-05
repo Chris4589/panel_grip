@@ -9,8 +9,8 @@
 
 var fw_LoginAdmin, fw_InGame;
 
-var const authUser[] = "chris";
-var const authPassword[] = "123456789";
+var const authUser[] = "user";
+var const authPassword[] = "password";
 
 var const urlBase[] = "http://198.12.74.204:5050";
 
@@ -257,7 +257,8 @@ function getServer() {
 
 function showVencimiento(id) {
 	if (!is_user_admin(id)) {
-		return;
+		console_print(id, "NO ERES ADMIN.");
+		return PLUGIN_HANDLED;
 	}
 
 	client_print_color(id, print_team_blue, "/************************************/");
@@ -272,12 +273,14 @@ function showVencimiento(id) {
 
 	var ret;
 	ExecuteForward(fw_InGame, ret, id);
+	return PLUGIN_HANDLED;
 }
 
 function OnStart() {
 	admin_init(param1, param2, param3);
 
 	registerCommand("joinclass", "showVencimiento");
+	registerCommand("say admin", "showVencimiento");
 
 	fw_LoginAdmin = CreateMultiForward("fw_LoginPost", ET_IGNORE, FP_CELL);
 	fw_InGame = CreateMultiForward("fw_InGame_Post", ET_IGNORE, FP_CELL);
