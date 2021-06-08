@@ -152,7 +152,7 @@ function give_admins() {
 		return;
 	}
 
-	var role[32], authid[32], flags[32], createdAt[50], password[50], vencimiento[50], bool:is_steam, trieData[3][50];
+	var role[32], authid[32], flags[32], createdAt[50], password[50], vencimiento[50], bool:is_steam;
 
 	for(var i = 0; i < grip_json_array_get_count(msg); i++)
 	{
@@ -165,10 +165,6 @@ function give_admins() {
 		grip_json_object_get_string(value, "vencimiento", vencimiento, charsmax(vencimiento));
 
 		is_steam = grip_json_object_get_bool(value, "steam");
-
-		copy(trieData[0], charsmax(trieData[]), authid);
-		copy(trieData[1], charsmax(trieData[]), role);
-		copy(trieData[2], charsmax(trieData[]), vencimiento);
 
 		admins_push(authid, password, read_flags(flags), read_flags( is_steam ? "ce" : "ab"));
 
