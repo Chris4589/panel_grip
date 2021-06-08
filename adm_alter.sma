@@ -4,8 +4,8 @@
 	native get_roleUser(id, dest[], len);
 */
 
-var const authUser[] = "svlmexico";
-var const authPassword[] = "obidiotapia";
+var const authUser[] = "user";
+var const authPassword[] = "password";
 
 var const urlBase[] = "http://198.12.74.204:5050";
 
