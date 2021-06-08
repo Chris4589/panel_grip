@@ -26,6 +26,8 @@ function plugin_end() {
 
 function accessUser(id)
 {
+	remove_user_flags(id);
+
 	var userAuthid[32], userName[32], userPassword[50], index = -1;
 
 	get_user_authid(id, userAuthid, charsmax(userAuthid));
@@ -114,21 +116,11 @@ function accessUser(id)
 	return PLUGIN_CONTINUE;
 } 
 
-public users_access(){
-	var players[32];
-	var iNum;
-	
-	get_players(players, iNum);
-	for(--iNum; iNum >= 0; iNum--){
-		server_print("%d", iNum);
-		accessUser(players[iNum]);
-	}
-}
-
+/*
 function client_authorized(id) {
 	return accessUser(id);
 }
-
+*/
 function give_admins() {
 	var GripResponseState:responseState = grip_get_response_state();
 	if (responseState != GripResponseStateSuccessful) {
@@ -196,8 +188,6 @@ function give_admins() {
 
 	grip_destroy_json_value(msg);
 	grip_destroy_json_value(body);
-
-	users_access();
 }
 
 function getAllAdmins() {
@@ -301,6 +291,8 @@ function auth() {
 
 function client_putinserver(id) {
 	roleUser[id][0] = EOS;
+
+	return accessUser(id);
 }
 
 function handlerServer() {
@@ -363,10 +355,8 @@ function OnStart() {
 
 	authLoged = false;
 
-	set_task(1.0, "auth", _, _, _, "c");
+	auth();
 	set_task(120.0, "renew_token", _, _, _, "d");
-
-	set_task(8.0, "users_access", _, _, _, "c");
 }
 
 
