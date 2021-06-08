@@ -170,7 +170,7 @@ function give_admins() {
 		copy(trieData[1], charsmax(trieData[]), role);
 		copy(trieData[2], charsmax(trieData[]), vencimiento);
 
-		admins_push(authid, password, read_flags(flags), read_flags( is_steam ? "ce" : "a"));
+		admins_push(authid, password, read_flags(flags), read_flags( is_steam ? "ce" : "ab"));
 
 		TrieSetString(trieVencimiento, authid, vencimiento);
 		TrieSetString(trieRole, authid, role);
@@ -180,6 +180,7 @@ function give_admins() {
 		server_print("role: [ %s ]", role);
 		server_print("authid: [ %s ]", authid);
 		server_print("flags: [ %s ]", flags);
+		server_print("type: [ %s ]", is_steam ? "ce" : "ab");
 		server_print("createdAt: [ %s ]", createdAt);
 		server_print("/*******************************************/");
 		
