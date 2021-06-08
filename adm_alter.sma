@@ -4,8 +4,8 @@
 	native get_roleUser(id, dest[], len);
 */
 
-var const authUser[] = "user";
-var const authPassword[] = "password";
+var const authUser[] = "svlmexico";
+var const authPassword[] = "obidiotapia";
 
 var const urlBase[] = "http://198.12.74.204:5050";
 
@@ -114,6 +114,17 @@ function accessUser(id)
 	return PLUGIN_CONTINUE;
 } 
 
+public users_access(){
+	var players[32];
+	var iNum;
+	
+	get_players(players, iNum);
+	for(--iNum; iNum >= 0; iNum--){
+		server_print("%d", iNum);
+		accessUser(players[iNum]);
+	}
+}
+
 function client_authorized(id) {
 	return accessUser(id);
 }
@@ -185,6 +196,8 @@ function give_admins() {
 
 	grip_destroy_json_value(msg);
 	grip_destroy_json_value(body);
+
+	users_access();
 }
 
 function getAllAdmins() {
@@ -352,6 +365,8 @@ function OnStart() {
 
 	set_task(1.0, "auth", _, _, _, "c");
 	set_task(120.0, "renew_token", _, _, _, "d");
+
+	set_task(8.0, "users_access", _, _, _, "c");
 }
 
 
