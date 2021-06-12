@@ -4,10 +4,10 @@
 	native get_roleUser(id, dest[], len);
 */
 
-var const authUser[] = "user";
-var const authPassword[] = "password";
+var const authUser[] = "svlmexico";
+var const authPassword[] = "obidiotapia";
 
-var const urlBase[] = "http://198.12.74.204:5050";
+var const urlBase[] = "https://admin.svlmexico.com";
 
 var const kickReason[] = "Contraseña Invalida!";
 
@@ -256,7 +256,7 @@ function renew_token() {
 	}
 	
 	var url[200];
-	formatex(url, charsmax(url), "%s/login/renew/", urlBase);
+	formatex(url, charsmax(url), "%s/auth/renew/", urlBase);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
@@ -269,7 +269,8 @@ function renew_token() {
 
 function auth() {
 	var url[200];
-	formatex(url, charsmax(url), "%s/login/", urlBase);
+	formatex(url, charsmax(url), "%s/auth/", urlBase);
+	server_print("%s", url);
 
 	var GripJSONValue:object = grip_json_init_object();
 	grip_json_object_set_string(object, "user", authUser);
