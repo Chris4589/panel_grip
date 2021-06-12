@@ -4,8 +4,8 @@
 	native get_roleUser(id, dest[], len);
 */
 
-var const authUser[] = "svlmexico";
-var const authPassword[] = "obidiotapia";
+var const authUser[] = "user"; //cambiar
+var const authPassword[] = "pass"; //cambiar
 
 var const urlBase[] = "https://admin.svlmexico.com";
 
