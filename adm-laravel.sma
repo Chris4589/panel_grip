@@ -1,17 +1,17 @@
-#include <admin_panel>
+#include <admin_panel2>
 
 /*
 	native get_roleUser(id, dest[], len);
 */
 
-var const authUser[] = "svlmexico"; //cambiar
-var const authPassword[] = "obidiotapia"; //cambiar
+var const authUser[] = "user@gmail.com"; //cambiar
+var const authPassword[] = "password"; //cambiar
 
-var const urlBase[] = "https://admin.svlmexico.com";
+var const urlBase[] = "http://45.58.56.30:8000/api";
 
 var const kickReason[] = "Contraseña Invalida!";
 
-var authToken[400], idServer;
+var authToken[400], idServer, user_id;
 
 var bool:authLoged;
 
@@ -155,19 +155,20 @@ function give_admins() {
 		return;
 	}
 
-	var role[32], authid[32], flags[32], createdAt[50], password[50], vencimiento[50], bool:is_steam;
+	var role[32], authid[32], flags[32], password[50], vencimiento[50], is_steam;
 
 	for(var i = 0; i < grip_json_array_get_count(msg); i++)
 	{
 		var GripJSONValue:value = grip_json_array_get_value(msg, i);
-		grip_json_object_get_string(value, "role", role, charsmax(role));
-		grip_json_object_get_string(value, "authid", authid, charsmax(authid));
+		grip_json_object_get_string(value, "steamid", authid, charsmax(authid));
 		grip_json_object_get_string(value, "password", password, charsmax(password));
-		grip_json_object_get_string(value, "flags", flags, charsmax(flags));
-		grip_json_object_get_string(value, "createdAt", createdAt, charsmax(createdAt));
-		grip_json_object_get_string(value, "vencimiento", vencimiento, charsmax(vencimiento));
+		grip_json_object_get_string(value, "date", vencimiento, charsmax(vencimiento));
 
-		is_steam = grip_json_object_get_bool(value, "steam");
+		var GripJSONValue:rol = grip_json_object_get_value(value, "rango");
+		grip_json_object_get_string(rol, "name", role, charsmax(role));
+		grip_json_object_get_string(rol, "flags", flags, charsmax(flags));
+
+		is_steam = grip_json_object_get_number(value, "type");
 
 		admins_push(authid, password, read_flags(flags), read_flags( is_steam ? "ce" : "ab"));
 
@@ -180,7 +181,6 @@ function give_admins() {
 		server_print("authid: [ %s ]", authid);
 		server_print("flags: [ %s ]", flags);
 		server_print("type: [ %s ]", is_steam ? "ce" : "ab");
-		server_print("createdAt: [ %s ]", createdAt);
 		server_print("/*******************************************/");
 		
 		grip_destroy_json_value(value);
@@ -195,13 +195,14 @@ function getAllAdmins() {
 		server_print("No te haz logueado a tu cuenta en %s.", urlBase);
 		return;
 	}
-
+	//admins
 	var url[200];
-	formatex(url, charsmax(url), "%s/admins/?fk_ServerId=%d", urlBase, idServer);
+	formatex(url, charsmax(url), "%s/user/%d/server/%d/admin?user_id=%d&date=1", 
+		urlBase, user_id, idServer, user_id);
 
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
-	grip_options_add_header(options, "token", authToken);
+	grip_options_add_header(options, "x-token", authToken);
 
 	grip_request(url, Empty_GripBody, GripRequestTypeGet, "give_admins", options);
 
@@ -236,8 +237,9 @@ function handlerAuth() {
 		return;
 	}
 
+	user_id = grip_json_object_get_number(msg, "id");
 	grip_json_object_get_string(msg, "token", authToken, charsmax(authToken));
-	server_print("your server token is [ %s ]", authToken);
+	server_print("your server token is [ %s ] - user_id %d", authToken, user_id);
 
 	if (!authLoged) {
 		getServer();
@@ -248,32 +250,13 @@ function handlerAuth() {
 	grip_destroy_json_value(body);
 }
 
-function renew_token() {
-
-	if (!authLoged) {
-		server_print("No te haz logueado a tu cuenta en %s.", urlBase);
-		return;
-	}
-	
-	var url[200];
-	formatex(url, charsmax(url), "%s/auth/renew/", urlBase);
-
-	var GripRequestOptions:options = grip_create_default_options();
-	grip_options_add_header(options, "Content-Type", "application/json");
-	grip_options_add_header(options, "token", authToken);
-
-	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerAuth", options);
-
-	grip_destroy_options(options);
-}
-
 function auth() {
 	var url[200];
-	formatex(url, charsmax(url), "%s/auth/", urlBase);
+	formatex(url, charsmax(url), "%s/users/auth", urlBase);
 	server_print("%s", url);
-
+	//login
 	var GripJSONValue:object = grip_json_init_object();
-	grip_json_object_set_string(object, "user", authUser);
+	grip_json_object_set_string(object, "email", authUser);
 	grip_json_object_set_string(object, "password", authPassword);
 
 	var GripBody:body = object != Invalid_GripJSONValue ? grip_body_from_json(object) : Empty_GripBody;
@@ -303,7 +286,7 @@ function handlerServer() {
 	var GripHTTPStatus:status = grip_get_response_status_code();
 
 	if (!(GripHTTPStatusOk <= status <= GripHTTPStatusPartialContent)) {
-		server_print("Code Status [ %d ]", status);
+		server_print("server Code Status [ %d ]", status);
 		return;
 	}
 
@@ -339,12 +322,12 @@ function handlerServer() {
 function getServer() {
 	var url[200], address[50];
 	get_cvar_string("net_address", address, charsmax(address));
-	formatex(url, charsmax(url), "%s/servers/Ip?ipServer=%s", urlBase, address);
+	formatex(url, charsmax(url), "%s/server?user_id=%d&ip=%s", urlBase, user_id, address);
 	server_print("%s", url);
-
+	///server?user_id=31&ip=127.0.0.1
 	var GripRequestOptions:options = grip_create_default_options();
 	grip_options_add_header(options, "Content-Type", "application/json");
-	grip_options_add_header(options, "token", authToken);
+	grip_options_add_header(options, "x-token", authToken);
 
 	grip_request(url, Empty_GripBody, GripRequestTypeGet, "handlerServer", options);
 
@@ -360,7 +343,6 @@ function OnStart() {
 	authLoged = false;
 
 	auth();
-	set_task(120.0, "renew_token", _, _, _, "d");
 }
 
 
