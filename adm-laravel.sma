@@ -2,10 +2,11 @@
 
 /*
 	native get_roleUser(id, dest[], len);
+	native get_flagsUser(id, dest[], len);
 */
 
-var const authUser[] = "user@gmail.com"; //cambiar
-var const authPassword[] = "password"; //cambiar
+var const authUser[] = "chris.syst3@gmail.com"; //cambiar
+var const authPassword[] = "svlmexico"; //cambiar
 
 var const urlBase[] = "http://45.58.56.30:8000/api";
 
@@ -15,13 +16,14 @@ var authToken[400], idServer, user_id;
 
 var bool:authLoged;
 
-var Trie:trieVencimiento, Trie:trieRole;
+var Trie:trieVencimiento, Trie:trieRole, Trie:trieFlags;
 
-var fechaVencimiento[33][32], roleUser[33][32];
+var fechaVencimiento[33][32], roleUser[33][32], userFlags[33][32];
 
 function plugin_end() {
     TrieDestroy(trieVencimiento);
     TrieDestroy(trieRole);
+    TrieDestroy(trieFlags);
 }
 
 function accessUser(id)
@@ -38,7 +40,7 @@ function accessUser(id)
 	static authid[44];
 	static access;
 	static password[32];
-	static role[32];
+	static role[32], user_flags[32];
 	static vencimiento[32];
 
 	for(var i = 0; i < admins_num(); i++)
@@ -57,6 +59,10 @@ function accessUser(id)
 				if (TrieGetString(trieVencimiento, userAuthid, vencimiento, charsmax(vencimiento))) {
  					copy(fechaVencimiento[id], charsmax(fechaVencimiento[]), vencimiento);
 				}
+				
+				if (TrieGetString(trieFlags, userAuthid, user_flags, charsmax(user_flags))) {
+ 					copy(userFlags[id], charsmax(userFlags[]), user_flags);
+				}
 
  				index = i;
  				break;
@@ -71,6 +77,10 @@ function accessUser(id)
 
 				if (TrieGetString(trieVencimiento, userName, vencimiento, charsmax(vencimiento))) {
  					copy(fechaVencimiento[id], charsmax(fechaVencimiento[]), vencimiento);
+				}
+
+				if (TrieGetString(trieFlags, userAuthid, user_flags, charsmax(user_flags))) {
+ 					copy(userFlags[id], charsmax(userFlags[]), user_flags);
 				}
 
  				index = i;
@@ -174,14 +184,7 @@ function give_admins() {
 
 		TrieSetString(trieVencimiento, authid, vencimiento);
 		TrieSetString(trieRole, authid, role);
-
-		server_print("/*******************************************/");
-		server_print("Admin cargado.");
-		server_print("role: [ %s ]", role);
-		server_print("authid: [ %s ]", authid);
-		server_print("flags: [ %s ]", flags);
-		server_print("type: [ %s ]", is_steam ? "ce" : "ab");
-		server_print("/*******************************************/");
+		TrieSetString(trieFlags, authid, flags);
 		
 		grip_destroy_json_value(value);
 	}
@@ -339,6 +342,7 @@ function OnStart() {
 
 	trieVencimiento = TrieCreate( );
 	trieRole = TrieCreate( );
+	trieFlags= TrieCreate( );
 
 	authLoged = false;
 
@@ -348,7 +352,23 @@ function OnStart() {
 
 function CreateNatives() {
 	register_native("get_roleUser", "handler_roleUser", 0);// get_roleUser(id, dest[], len);
+	register_native("get_flagsUser", "handler_flagsUser", 0); //get_flagsUser(id, dest[], len);
+	register_native("get_serverToken", "handler_getToken", 0); //get_flagsUser(id, dest[], len);
 }
+
+public handler_getToken(plugin, params)
+{
+	set_string(1, authToken, charsmax(authToken));
+	return -1;
+}
+
+
+public handler_flagsUser(plugin, params)
+{
+	set_string(2, userFlags[get_param(1)], get_param(3));
+	return -1;
+}
+
 
 public handler_roleUser(plugin, params)
 {
