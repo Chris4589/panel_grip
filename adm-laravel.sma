@@ -6,7 +6,7 @@
 */
 
 var const authUser[] = "chris.syst3@gmail.com"; //cambiar
-var const authPassword[] = "svlmexico"; //cambiar
+var const authPassword[] = "asss"; //cambiar
 
 var const urlBase[] = "http://45.58.56.30:8000/api";
 
